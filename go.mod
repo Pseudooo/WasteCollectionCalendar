@@ -2,7 +2,10 @@ module github.com/Pseudooo/WasteCollectionCalendar
 
 go 1.27.1
 
-require github.com/gin-gonic/gin v1.12.0
+require (
+	github.com/arran4/golang-ical v0.3.6
+	github.com/gin-gonic/gin v1.12.0
+)
 
 require (
 	github.com/bytedance/gopkg v0.1.3 // indirect
