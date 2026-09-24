@@ -43,7 +43,7 @@ func getCalendarHandler(c *gin.Context) {
 }
 
 func getWasteCollectionEvents(uprn string, postcode string, month int, year int) ([]WasteCollectionEvent, error) {
-	endpoint := "https://ilambassadorformsprod.azurewebsites.net/wastecollectiondays/wastecollection"
+	endpoint := "https://ilambassadorformsprod.azurewebsites.net/wastecollectiondays/wastecollectioncalendar"
 	data := url.Values{}
 	data.Set("Postcode", postcode)
 	data.Set("Month", strconv.Itoa(month))
