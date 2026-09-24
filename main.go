@@ -21,18 +21,19 @@ type WasteCollectionEvent struct {
 func main() {
 	router := gin.Default()
 
-	router.GET("/calendar", getCalendar)
+	router.GET("/calendar", getCalendarHandler)
 
 	router.Run("localhost:8080")
 }
 
-func getCalendar(c *gin.Context) {
-	calendar := ics.NewCalendar()
-	event := calendar.AddEvent("my-id")
-	event.SetCreatedTime(time.Now())
-	event.SetDtStampTime(time.Now())
-	event.SetStartAt(time.Now())
-	event.SetEndAt(time.Now())
+func getCalendarHandler(c *gin.Context) {
+
+	events, err := getWasteCollectionEvents("123456789", "AB12 3CD", 10, 2026)
+	if err != nil {
+		c.AbortWithError(500, err)
+	}
+
+	calendar := buildCalendarFromWasteCollectionEvents(events)
 
 	c.Header("Content-Type", "text/calendar; charset=utf-8")
 	c.Header("Content-Disposition", `attachment; filename="calendar.ics"`)
@@ -97,4 +98,25 @@ func parseWasteCollectionEventsFromReader(reader io.Reader) ([]WasteCollectionEv
 	})
 
 	return events, nil
+}
+
+func buildCalendarFromWasteCollectionEvents(events []WasteCollectionEvent) *ics.Calendar {
+	calendar := ics.NewCalendar()
+
+	for index, value := range events {
+		calendarEvent := calendar.AddEvent(strconv.Itoa(index))
+		calendarEvent.SetSummary(value.Title)
+		calendarEvent.SetProperty(
+			ics.ComponentPropertyDtStart,
+			value.Date.Format("20060102"),
+			ics.WithValue(string(ics.ValueDataTypeDate)),
+		)
+		calendarEvent.SetProperty(
+			ics.ComponentPropertyDtEnd,
+			value.Date.AddDate(0, 0, 1).Format("20060102"),
+			ics.WithValue(string(ics.ValueDataTypeDate)),
+		)
+	}
+
+	return calendar
 }
