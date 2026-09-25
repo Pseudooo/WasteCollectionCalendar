@@ -35,12 +35,14 @@ func getCalendarHandler(c *gin.Context) {
 	var query CalendarQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 
 	currentTime := time.Now()
 	events, err := getWasteCollectionEvents(query.Uprn, query.Postcode, int(currentTime.Month()), currentTime.Year())
 	if err != nil {
 		c.AbortWithError(500, err)
+		return
 	}
 
 	calendar := buildCalendarFromWasteCollectionEvents(events)
