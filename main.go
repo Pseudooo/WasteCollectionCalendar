@@ -37,7 +37,8 @@ func getCalendarHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	}
 
-	events, err := getWasteCollectionEvents("123456789", "AB12 3CD", 10, 2026)
+	currentTime := time.Now()
+	events, err := getWasteCollectionEvents(query.Uprn, query.Postcode, int(currentTime.Month()), currentTime.Year())
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
