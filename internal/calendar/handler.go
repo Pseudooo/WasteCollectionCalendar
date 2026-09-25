@@ -32,6 +32,10 @@ func (h *CalendarHandler) GetCalendar(c *gin.Context) {
 		evalTime := currentTime.AddDate(0, i, 0)
 		events, err := getWasteCollectionEvents(query.Uprn, query.Postcode, int(evalTime.Month()), evalTime.Year())
 		if err != nil {
+			h.Logger.Error(
+				"Error when calling gov api",
+				slog.Any("error", err),
+			)
 			c.AbortWithError(500, err)
 			return
 		}
