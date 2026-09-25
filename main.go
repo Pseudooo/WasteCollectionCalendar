@@ -26,7 +26,16 @@ func main() {
 	router.Run("localhost:8080")
 }
 
+type CalendarQuery struct {
+	Uprn     string `form:"uprn" binding:"required"`
+	Postcode string `form:"postcode" binding:"required"`
+}
+
 func getCalendarHandler(c *gin.Context) {
+	var query CalendarQuery
+	if err := c.ShouldBindQuery(&query); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
 
 	events, err := getWasteCollectionEvents("123456789", "AB12 3CD", 10, 2026)
 	if err != nil {
