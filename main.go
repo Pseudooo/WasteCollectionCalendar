@@ -11,11 +11,14 @@ import (
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
+	calendarHandler := &calendar.CalendarHandler{Logger: logger}
+
 	router := gin.New()
 	router.Use(SlogMiddleware(logger))
 	router.Use(gin.Recovery())
 
-	router.GET("/calendar", calendar.GetCalendarHandler)
+	router.GET("/calendar", calendarHandler.GetCalendar)
 
 	router.Run("localhost:8080")
 }
@@ -29,7 +32,7 @@ func SlogMiddleware(logger *slog.Logger) gin.HandlerFunc {
 		c.Next()
 
 		logger.Info(
-			"request",
+			"Request Completed",
 			slog.String("method", c.Request.Method),
 			slog.String("path", path),
 			slog.String("query", query),
