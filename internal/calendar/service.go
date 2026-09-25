@@ -1,7 +1,8 @@
 package calendar
 
 import (
-	"strconv"
+	"fmt"
+	"time"
 
 	"github.com/Pseudooo/WasteCollectionCalendar/internal/models"
 	ics "github.com/arran4/golang-ical"
@@ -9,10 +10,17 @@ import (
 
 func buildCalendarFromWasteCollectionEvents(events []models.WasteCollectionEvent) *ics.Calendar {
 	calendar := ics.NewCalendar()
+	calendar.SetMethod(ics.MethodRequest)
 
-	for index, value := range events {
-		calendarEvent := calendar.AddEvent(strconv.Itoa(index))
+	nowStr := time.Now().UTC().Format("20060102T150405Z")
+
+	for _, value := range events {
+		uniqueId := fmt.Sprintf("waste-collection-%d-%d", int(value.Date.Month()), value.Date.Day())
+		calendarEvent := calendar.AddEvent(uniqueId)
 		calendarEvent.SetSummary(value.Title)
+		calendarEvent.SetProperty(ics.ComponentPropertyDtstamp, nowStr)
+		calendarEvent.SetProperty(ics.ComponentPropertyCreated, nowStr)
+
 		calendarEvent.SetProperty(
 			ics.ComponentPropertyDtStart,
 			value.Date.Format("20060102"),

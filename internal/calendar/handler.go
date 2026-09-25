@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Pseudooo/WasteCollectionCalendar/internal/models"
+	ics "github.com/arran4/golang-ical"
 	"github.com/gin-gonic/gin"
 )
 
@@ -39,5 +40,5 @@ func GetCalendarHandler(c *gin.Context) {
 	c.Header("Content-Disposition", `attachment; filename="calendar.ics"`)
 	c.Header("Cache-Control", "no-cache; no-store; must-revalidate")
 
-	c.String(http.StatusOK, calendar.Serialize())
+	c.String(http.StatusOK, calendar.Serialize(ics.WithNewLineWindows))
 }
