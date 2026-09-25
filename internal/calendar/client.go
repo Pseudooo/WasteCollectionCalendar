@@ -1,7 +1,9 @@
 package calendar
 
 import (
+	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -11,6 +13,32 @@ import (
 	"github.com/Pseudooo/WasteCollectionCalendar/internal/models"
 	"github.com/PuerkitoBio/goquery"
 )
+
+type GovApiError struct {
+	StatusCode   int
+	Url          string
+	Uprn         string
+	Postcode     string
+	Month        int
+	Year         int
+	ResponseBody string
+}
+
+func (e *GovApiError) Error() string {
+	return fmt.Errorf("Api request failed with status %d", e.StatusCode).Error()
+}
+
+func (e *GovApiError) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.Int("status_code", e.StatusCode),
+		slog.String("url", e.Url),
+		slog.String("uprn", e.Uprn),
+		slog.String("postcode", e.Postcode),
+		slog.Int("month", e.Month),
+		slog.Int("year", e.Year),
+		slog.String("response_body", e.ResponseBody),
+	)
+}
 
 func getWasteCollectionEvents(uprn string, postcode string, month int, year int) ([]models.WasteCollectionEvent, error) {
 	endpoint := "https://ilambassadorformsprod.azurewebsites.net/wastecollectiondays/wastecollectioncalendar"
@@ -34,6 +62,21 @@ func getWasteCollectionEvents(uprn string, postcode string, month int, year int)
 		return nil, err
 	}
 	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		limitedReader := io.LimitReader(res.Body, 1024)
+		bytes, _ := io.ReadAll(limitedReader)
+
+		return nil, &GovApiError{
+			StatusCode:   res.StatusCode,
+			Url:          req.URL.String(),
+			Uprn:         uprn,
+			Postcode:     postcode,
+			Month:        month,
+			Year:         year,
+			ResponseBody: string(bytes),
+		}
+	}
 
 	events, err := parseWasteCollectionEventsFromReader(res.Body)
 	if err != nil {
