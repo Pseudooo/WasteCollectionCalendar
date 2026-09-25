@@ -38,14 +38,20 @@ func getCalendarHandler(c *gin.Context) {
 		return
 	}
 
+	var allEvents []WasteCollectionEvent
 	currentTime := time.Now()
-	events, err := getWasteCollectionEvents(query.Uprn, query.Postcode, int(currentTime.Month()), currentTime.Year())
-	if err != nil {
-		c.AbortWithError(500, err)
-		return
+	for i := range 3 {
+		evalTime := currentTime.AddDate(0, i, 0)
+		events, err := getWasteCollectionEvents(query.Uprn, query.Postcode, int(evalTime.Month()), evalTime.Year())
+		if err != nil {
+			c.AbortWithError(500, err)
+			return
+		}
+
+		allEvents = append(allEvents, events...)
 	}
 
-	calendar := buildCalendarFromWasteCollectionEvents(events)
+	calendar := buildCalendarFromWasteCollectionEvents(allEvents)
 
 	c.Header("Content-Type", "text/calendar; charset=utf-8")
 	c.Header("Content-Disposition", `attachment; filename="calendar.ics"`)
