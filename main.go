@@ -4,10 +4,14 @@ import (
 	"log/slog"
 	"os"
 	"time"
+	"uuid"
 
 	"github.com/Pseudooo/WasteCollectionCalendar/internal/calendar"
+	"github.com/bytedance/gopkg/util/logger"
 	"github.com/gin-gonic/gin"
 )
+
+const LoggerKey = "slog_logger"
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
@@ -23,20 +27,28 @@ func main() {
 	router.Run("localhost:8080")
 }
 
-func SlogMiddleware(logger *slog.Logger) gin.HandlerFunc {
+func SlogMiddleware(baseLogger *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
-		path := c.Request.URL.Path
-		query := c.Request.URL.RawQuery
+
+		correlationId := c.GetHeader("X-Correlation-Id")
+		if correlationId == "" {
+			correlationId = uuid.New().String()
+		}
+		c.Header("X-Correlation-Id", correlationId)
+
+		requestLogger := baseLogger.With(
+			slog.String("correlation_id", correlationId),
+		)
+		c.Set(LoggerKey, requestLogger)
 
 		c.Next()
 
-		logger.Info(
-			"Request Completed",
+		requestLogger.Info(
+			"Requested Completed",
 			slog.String("method", c.Request.Method),
-			slog.String("path", path),
-			slog.String("query", query),
-			slog.Int("status", c.Writer.Status()),
+			slog.String("path", c.Request.URL.Path),
+			slog.String("query", c.Request.URL.RawQuery),
 			slog.Duration("latency", time.Since(start)),
 		)
 
