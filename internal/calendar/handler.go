@@ -20,6 +20,13 @@ type CalendarQuery struct {
 }
 
 func (h *CalendarHandler) GetCalendar(c *gin.Context) {
+	logger := h.Logger
+	if ctxLogger, exists := c.Get("slog_logger"); exists {
+		if l, ok := ctxLogger.(*slog.Logger); ok {
+			logger = l
+		}
+	}
+
 	var query CalendarQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -32,7 +39,7 @@ func (h *CalendarHandler) GetCalendar(c *gin.Context) {
 		evalTime := currentTime.AddDate(0, i, 0)
 		events, err := getWasteCollectionEvents(query.Uprn, query.Postcode, int(evalTime.Month()), evalTime.Year())
 		if err != nil {
-			h.Logger.Error(
+			logger.Error(
 				"Error when calling gov api",
 				slog.Any("error", err),
 			)
