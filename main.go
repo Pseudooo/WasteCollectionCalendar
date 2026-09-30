@@ -14,7 +14,12 @@ import (
 const LoggerKey = "slog_logger"
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	globalLogAttributes := []slog.Attr{
+		slog.String("service.name", "bindayapi"),
+		slog.String("service.version", "0.1.0"),
+	}
+	loggingHandler := slog.NewJSONHandler(os.Stdout, nil).WithAttrs(globalLogAttributes)
+	logger := slog.New(loggingHandler)
 
 	calendarHandler := &calendar.CalendarHandler{Logger: logger}
 
