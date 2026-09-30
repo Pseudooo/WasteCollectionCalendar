@@ -5,8 +5,6 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
-const LoggerKey = "slog_logger"
-
 var (
 	meter = otel.Meter("calendar-service-router")
 
