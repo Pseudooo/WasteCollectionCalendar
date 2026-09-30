@@ -1,18 +1,41 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
 	"time"
 	"uuid"
 
+	telemetry "github.com/Pseudooo/WasteCollectionCalendar/internal"
 	"github.com/Pseudooo/WasteCollectionCalendar/internal/calendar"
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+	otelmetric "go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 const LoggerKey = "slog_logger"
 
 func main() {
+	ctx := context.Background()
+	shutdownMetrics, err := InitMetrics(ctx)
+	if err != nil {
+		panic(err)
+	}
+	defer func() {
+		if err := shutdownMetrics(ctx); err != nil {
+			fmt.Printf("Error shutting down metrics%v\n", err)
+		}
+	}()
+
 	globalLogAttributes := []slog.Attr{
 		slog.String("service.name", "wastecollectioncalendar"),
 		slog.String("service.version", "0.1.0"),
@@ -48,13 +71,25 @@ func SlogMiddleware(baseLogger *slog.Logger) gin.HandlerFunc {
 
 		c.Next()
 
+		elapsed := time.Since(start)
+		response_code := strconv.Itoa(c.Writer.Status())
+
 		requestLogger.Info(
 			"Request Completed",
 			slog.String("method", c.Request.Method),
 			slog.String("path", c.Request.URL.Path),
 			slog.String("query", c.Request.URL.RawQuery),
-			slog.Duration("latency", time.Since(start)),
+			slog.Duration("latency", elapsed),
+			slog.String("status_code", response_code),
 		)
+
+		metricAttributes := otelmetric.WithAttributes(
+			attribute.String("http.method", c.Request.Method),
+			attribute.String("http.status_code", response_code),
+		)
+		ctx := c.Request.Context()
+		telemetry.HttpRequestsTotal.Add(ctx, 1, metricAttributes)
+		telemetry.HttpRequestDuration.Record(ctx, elapsed.Seconds(), metricAttributes)
 
 		if len(c.Errors) > 0 {
 			for _, err := range c.Errors {
@@ -62,4 +97,38 @@ func SlogMiddleware(baseLogger *slog.Logger) gin.HandlerFunc {
 			}
 		}
 	}
+}
+
+func InitMetrics(ctx context.Context) (func(context.Context) error, error) {
+	otelHost := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+	if otelHost == "" {
+		otel.SetMeterProvider(noop.NewMeterProvider())
+		return func(ctx context.Context) error { return nil }, nil
+	}
+
+	exporter, err := otlpmetricgrpc.New(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create OTLP metric exporter: %w", err)
+	}
+
+	res, err := resource.New(ctx,
+		resource.WithAttributes(
+			semconv.ServiceNameKey.String("calendar-service"),
+			semconv.ServiceVersionKey.String("1.0.0"),
+		),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create resource: %w", err)
+	}
+
+	reader := metric.NewPeriodicReader(exporter, metric.WithInterval(15*time.Second))
+
+	provider := metric.NewMeterProvider(
+		metric.WithResource(res),
+		metric.WithReader(reader),
+	)
+
+	otel.SetMeterProvider(provider)
+
+	return provider.Shutdown, nil
 }
