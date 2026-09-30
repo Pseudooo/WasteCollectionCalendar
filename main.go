@@ -123,9 +123,24 @@ func InitMetrics(ctx context.Context) (func(context.Context) error, error) {
 
 	reader := metric.NewPeriodicReader(exporter, metric.WithInterval(15*time.Second))
 
+	customBuckets := []float64{
+		0.005, 0.010, 0.025, 0.050, 0.075, 0.100,
+		0.250, 0.500, 0.750, 1.000, 2.500, 5.000, 10.000,
+	}
+
+	durationView := metric.NewView(
+		metric.Instrument{Name: "http.server.request.duration"},
+		metric.Stream{
+			Aggregation: metric.AggregationExplicitBucketHistogram{
+				Boundaries: customBuckets,
+			},
+		},
+	)
+
 	provider := metric.NewMeterProvider(
 		metric.WithResource(res),
 		metric.WithReader(reader),
+		metric.WithView(durationView),
 	)
 
 	otel.SetMeterProvider(provider)
