@@ -7,7 +7,6 @@ import (
 	"uuid"
 
 	"github.com/Pseudooo/WasteCollectionCalendar/internal/calendar"
-	"github.com/bytedance/gopkg/util/logger"
 	"github.com/gin-gonic/gin"
 )
 
@@ -59,7 +58,7 @@ func SlogMiddleware(baseLogger *slog.Logger) gin.HandlerFunc {
 
 		if len(c.Errors) > 0 {
 			for _, err := range c.Errors {
-				logger.Error("error", slog.String("error", err.Error()))
+				requestLogger.Error("error", slog.String("error", err.Error()))
 			}
 		}
 	}
