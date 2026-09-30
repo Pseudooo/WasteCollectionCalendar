@@ -50,7 +50,7 @@ func SlogMiddleware(baseLogger *slog.Logger) gin.HandlerFunc {
 		c.Next()
 
 		requestLogger.Info(
-			"Requested Completed",
+			"Request Completed",
 			slog.String("method", c.Request.Method),
 			slog.String("path", c.Request.URL.Path),
 			slog.String("query", c.Request.URL.RawQuery),
