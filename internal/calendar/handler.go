@@ -54,7 +54,7 @@ func (h *CalendarHandler) GetCalendar(c *gin.Context) {
 
 	c.Header("Content-Type", "text/calendar; charset=utf-8")
 	c.Header("Content-Disposition", `attachment; filename="calendar.ics"`)
-	c.Header("Cache-Control", "no-cache; no-store; must-revalidate")
+	c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
 
 	c.String(http.StatusOK, calendar.Serialize(ics.WithNewLineWindows))
 }
