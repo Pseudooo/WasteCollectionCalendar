@@ -15,4 +15,6 @@ COPY --from=builder /usr/local/bin/app /app
 EXPOSE 8080
 USER 65534:65534
 
+ENV GIN_MODE=release
+
 CMD ["/app"]
