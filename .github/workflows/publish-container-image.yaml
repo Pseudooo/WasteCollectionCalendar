@@ -23,7 +23,7 @@ jobs:
 
       - name: Set Image Name
         id: image-name
-        run: echo "IMAGE_NAME=ghcr.io/${{GITHUB_REPOSITORY,,}}" >> $GITHUB_ENV
+        run: echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
 
       - name: Build & Publish Image
         uses: docker/build-push-action@v5
