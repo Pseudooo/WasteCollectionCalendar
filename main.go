@@ -51,7 +51,7 @@ func main() {
 
 	router.GET("/calendar", calendarHandler.GetCalendar)
 
-	router.Run("localhost:8080")
+	router.Run(":8080")
 }
 
 func SlogMiddleware(baseLogger *slog.Logger) gin.HandlerFunc {
