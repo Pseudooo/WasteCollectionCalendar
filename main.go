@@ -45,7 +45,7 @@ func main() {
 
 	router := gin.New()
 	router.Use(SlogMiddleware(logger))
-	router.Use(otelgin.Middleware(""))
+	router.Use(otelgin.Middleware("waste-collection-api"))
 	router.Use(gin.Recovery())
 
 	router.GET("/calendar", calendarHandler.GetCalendar)
@@ -102,12 +102,14 @@ func InitMetrics(ctx context.Context) (func(context.Context) error, error) {
 		return nil, fmt.Errorf("failed to create OTLP metric exporter: %w", err)
 	}
 
-	res, err := resource.New(ctx,
-		resource.WithAttributes(
+	res, err := resource.Merge(
+		resource.Default(),
+		resource.NewSchemaless(
 			semconv.ServiceNameKey.String("waste-collection-api"),
 			semconv.ServiceVersionKey.String("1.0.0"),
 		),
 	)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to create resource: %w", err)
 	}
