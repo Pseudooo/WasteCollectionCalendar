@@ -9,13 +9,11 @@ import (
 	"time"
 	"uuid"
 
-	telemetry "github.com/Pseudooo/WasteCollectionCalendar/internal"
 	"github.com/Pseudooo/WasteCollectionCalendar/internal/calendar"
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
-	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -37,7 +35,7 @@ func main() {
 	}()
 
 	globalLogAttributes := []slog.Attr{
-		slog.String("service.name", "wastecollectioncalendar"),
+		slog.String("service.name", "waste-collection-api"),
 		slog.String("service.version", "0.1.0"),
 	}
 	loggingHandler := slog.NewJSONHandler(os.Stdout, nil).WithAttrs(globalLogAttributes)
@@ -47,6 +45,7 @@ func main() {
 
 	router := gin.New()
 	router.Use(SlogMiddleware(logger))
+	router.Use(otelgin.Middleware("waste-collection-api"))
 	router.Use(gin.Recovery())
 
 	router.GET("/calendar", calendarHandler.GetCalendar)
@@ -83,14 +82,6 @@ func SlogMiddleware(baseLogger *slog.Logger) gin.HandlerFunc {
 			slog.String("status_code", response_code),
 		)
 
-		metricAttributes := otelmetric.WithAttributes(
-			attribute.String("http.method", c.Request.Method),
-			attribute.String("http.status_code", response_code),
-		)
-		ctx := c.Request.Context()
-		telemetry.HttpRequestsTotal.Add(ctx, 1, metricAttributes)
-		telemetry.HttpRequestDuration.Record(ctx, elapsed.Seconds(), metricAttributes)
-
 		if len(c.Errors) > 0 {
 			for _, err := range c.Errors {
 				requestLogger.Error("error", slog.String("error", err.Error()))
@@ -111,12 +102,14 @@ func InitMetrics(ctx context.Context) (func(context.Context) error, error) {
 		return nil, fmt.Errorf("failed to create OTLP metric exporter: %w", err)
 	}
 
-	res, err := resource.New(ctx,
-		resource.WithAttributes(
-			semconv.ServiceNameKey.String("calendar-service"),
+	res, err := resource.Merge(
+		resource.Default(),
+		resource.NewSchemaless(
+			semconv.ServiceNameKey.String("waste-collection-api"),
 			semconv.ServiceVersionKey.String("1.0.0"),
 		),
 	)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to create resource: %w", err)
 	}
