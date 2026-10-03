@@ -11,6 +11,7 @@ import (
 
 	"github.com/Pseudooo/WasteCollectionCalendar/internal/calendar"
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/metric/noop"
@@ -34,7 +35,7 @@ func main() {
 	}()
 
 	globalLogAttributes := []slog.Attr{
-		slog.String("service.name", "wastecollectioncalendar"),
+		slog.String("service.name", "waste-collection-api"),
 		slog.String("service.version", "0.1.0"),
 	}
 	loggingHandler := slog.NewJSONHandler(os.Stdout, nil).WithAttrs(globalLogAttributes)
@@ -44,6 +45,7 @@ func main() {
 
 	router := gin.New()
 	router.Use(SlogMiddleware(logger))
+	router.Use(otelgin.Middleware(""))
 	router.Use(gin.Recovery())
 
 	router.GET("/calendar", calendarHandler.GetCalendar)
@@ -102,7 +104,7 @@ func InitMetrics(ctx context.Context) (func(context.Context) error, error) {
 
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
-			semconv.ServiceNameKey.String("calendar-service"),
+			semconv.ServiceNameKey.String("waste-collection-api"),
 			semconv.ServiceVersionKey.String("1.0.0"),
 		),
 	)
