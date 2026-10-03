@@ -9,13 +9,10 @@ import (
 	"time"
 	"uuid"
 
-	telemetry "github.com/Pseudooo/WasteCollectionCalendar/internal"
 	"github.com/Pseudooo/WasteCollectionCalendar/internal/calendar"
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
-	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -82,14 +79,6 @@ func SlogMiddleware(baseLogger *slog.Logger) gin.HandlerFunc {
 			slog.Duration("latency", elapsed),
 			slog.String("status_code", response_code),
 		)
-
-		metricAttributes := otelmetric.WithAttributes(
-			attribute.String("http.method", c.Request.Method),
-			attribute.String("http.status_code", response_code),
-		)
-		ctx := c.Request.Context()
-		telemetry.HttpRequestsTotal.Add(ctx, 1, metricAttributes)
-		telemetry.HttpRequestDuration.Record(ctx, elapsed.Seconds(), metricAttributes)
 
 		if len(c.Errors) > 0 {
 			for _, err := range c.Errors {
