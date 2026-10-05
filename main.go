@@ -12,6 +12,7 @@ import (
 	"github.com/Pseudooo/WasteCollectionCalendar/internal/calendar"
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/metric/noop"
@@ -114,7 +115,11 @@ func InitMetrics(ctx context.Context) (func(context.Context) error, error) {
 		return nil, fmt.Errorf("failed to create resource: %w", err)
 	}
 
-	reader := metric.NewPeriodicReader(exporter, metric.WithInterval(15*time.Second))
+	reader := metric.NewPeriodicReader(
+		exporter,
+		metric.WithInterval(15*time.Second),
+		metric.WithProducer(runtime.NewProducer()),
+	)
 
 	customBuckets := []float64{
 		0.005, 0.010, 0.025, 0.050, 0.075, 0.100,
@@ -137,6 +142,14 @@ func InitMetrics(ctx context.Context) (func(context.Context) error, error) {
 	)
 
 	otel.SetMeterProvider(provider)
+
+	err = runtime.Start(
+		runtime.WithMeterProvider(provider),
+		runtime.WithMinimumReadMemStatsInterval(time.Second),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start runtime metrics collection: %w", err)
+	}
 
 	return provider.Shutdown, nil
 }
