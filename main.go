@@ -11,6 +11,8 @@ import (
 
 	telemetry "github.com/Pseudooo/WasteCollectionCalendar/internal"
 	"github.com/Pseudooo/WasteCollectionCalendar/internal/calendar"
+	govWasteApi "github.com/Pseudooo/WasteCollectionCalendar/internal/repositories"
+	externalHttpClient "github.com/Pseudooo/WasteCollectionCalendar/internal/util"
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
@@ -36,7 +38,13 @@ func main() {
 	loggingHandler := slog.NewJSONHandler(os.Stdout, nil).WithAttrs(globalLogAttributes)
 	logger := slog.New(loggingHandler)
 
-	calendarHandler := &calendar.CalendarHandler{Logger: logger}
+	govWasteApiClient := externalHttpClient.CreateExternalHttpClient("gov-waste-api")
+	govWasteApiRepository := govWasteApi.CreateRepository(govWasteApiClient, "https://ilambassadorformsprod.azurewebsites.net")
+
+	calendarHandler := &calendar.CalendarHandler{
+		Logger:     logger,
+		Repository: govWasteApiRepository,
+	}
 
 	router := gin.New()
 	router.Use(SlogMiddleware(logger))

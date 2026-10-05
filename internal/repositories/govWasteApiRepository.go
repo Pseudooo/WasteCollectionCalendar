@@ -1,4 +1,4 @@
-package calendar
+package govWasteApi
 
 import (
 	"context"
@@ -12,9 +12,8 @@ import (
 	"time"
 
 	"github.com/Pseudooo/WasteCollectionCalendar/internal/models"
+	externalHttpClient "github.com/Pseudooo/WasteCollectionCalendar/internal/util"
 	"github.com/PuerkitoBio/goquery"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/otel/attribute"
 )
 
 type GovApiError struct {
@@ -43,34 +42,34 @@ func (e *GovApiError) LogValue() slog.Value {
 	)
 }
 
-func getWasteCollectionEvents(ctx context.Context, uprn string, postcode string, month int, year int) ([]models.WasteCollectionEvent, error) {
-	endpoint := "https://ilambassadorformsprod.azurewebsites.net/wastecollectiondays/wastecollectioncalendar"
+type GovWasteApiRepository struct {
+	httpClient *externalHttpClient.ExternalHttpClient
+	baseUrl    string
+}
+
+func CreateRepository(client *externalHttpClient.ExternalHttpClient, baseUrl string) *GovWasteApiRepository {
+	return &GovWasteApiRepository{
+		httpClient: client,
+		baseUrl:    baseUrl,
+	}
+}
+
+func (r *GovWasteApiRepository) GetWasteCollectionEvents(ctx context.Context, uprn string, postcode string, month int, year int) ([]models.WasteCollectionEvent, error) {
+	endpoint := r.baseUrl + "/wastecollectiondays/wastecollectioncalendar"
+
 	data := url.Values{}
 	data.Set("Postcode", postcode)
 	data.Set("Month", strconv.Itoa(month))
 	data.Set("Year", strconv.Itoa(year))
 	data.Set("Uprn", uprn)
 
-	client := &http.Client{
-		Transport: otelhttp.NewTransport(
-			http.DefaultTransport,
-		),
-	}
-
-	labeler := &otelhttp.Labeler{}
-	labeler.Add(attribute.String("client.name", "gov-waste-api"))
-	ctx = otelhttp.ContextWithClientLabeler(ctx, labeler)
-
-	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, strings.NewReader(data.Encode()))
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
-	req.Header.Add("User-Agent", "github/Pseudooo/WasteCollectionCalendar")
-
-	res, err := client.Do(req)
+	res, err := r.httpClient.Do(
+		ctx,
+		http.MethodPost,
+		endpoint,
+		strings.NewReader(data.Encode()),
+		externalHttpClient.WithHeader("User-Agent", "github/Pseudooo/WasteCollectionCalendar"),
+		externalHttpClient.WithHeader("Content-Type", "application/x-www-form-urlencoded"))
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +81,7 @@ func getWasteCollectionEvents(ctx context.Context, uprn string, postcode string,
 
 		return nil, &GovApiError{
 			StatusCode:   res.StatusCode,
-			Url:          req.URL.String(),
+			Url:          res.Request.URL.RawPath,
 			Uprn:         uprn,
 			Postcode:     postcode,
 			Month:        month,
@@ -91,12 +90,7 @@ func getWasteCollectionEvents(ctx context.Context, uprn string, postcode string,
 		}
 	}
 
-	events, err := parseWasteCollectionEventsFromReader(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return events, nil
+	return parseWasteCollectionEventsFromReader(res.Body)
 }
 
 func parseWasteCollectionEventsFromReader(reader io.Reader) ([]models.WasteCollectionEvent, error) {
