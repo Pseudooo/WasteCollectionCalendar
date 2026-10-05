@@ -8,12 +8,14 @@ import (
 	"time"
 
 	"github.com/Pseudooo/WasteCollectionCalendar/internal/models"
+	govWasteApi "github.com/Pseudooo/WasteCollectionCalendar/internal/repositories"
 	ics "github.com/arran4/golang-ical"
 	"github.com/gin-gonic/gin"
 )
 
 type CalendarHandler struct {
-	Logger *slog.Logger
+	Logger     *slog.Logger
+	Repository *govWasteApi.GovWasteApiRepository
 }
 
 type CalendarQuery struct {
@@ -52,7 +54,7 @@ func (h *CalendarHandler) GetCalendar(ctx *gin.Context) {
 			}
 
 			evalTime := currentTime.AddDate(0, i, 0)
-			events, err := getWasteCollectionEvents(ctx, query.Uprn, query.Postcode, int(evalTime.Month()), evalTime.Year())
+			events, err := h.Repository.GetWasteCollectionEvents(ctx, query.Uprn, query.Postcode, int(evalTime.Month()), evalTime.Year())
 			if err != nil {
 				// Mark that an error occurred
 				if hasError.CompareAndSwap(0, 1) {
