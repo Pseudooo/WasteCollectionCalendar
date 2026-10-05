@@ -11,7 +11,7 @@ results in the form of an ICS file so it can be added to personal calendars.
 ### QuickStart
 
 To make use of this you'll need:
-1. Your address UPRN _(This is a unique number for an address, you can find this at [findmyaddress.co.uk](https://www.findmyaddress.co.uk/search))
+1. Your address UPRN _(This is a unique number for an address, you can find this at [findmyaddress.co.uk](https://www.findmyaddress.co.uk/search))_
 2. Your postcode
 
 With both of these create a URL:
