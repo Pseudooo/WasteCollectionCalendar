@@ -3,6 +3,8 @@ package calendar
 import (
 	"log/slog"
 	"net/http"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Pseudooo/WasteCollectionCalendar/internal/models"
@@ -35,18 +37,41 @@ func (h *CalendarHandler) GetCalendar(ctx *gin.Context) {
 
 	var allEvents []models.WasteCollectionEvent
 	currentTime := time.Now()
-	for i := range 3 {
-		evalTime := currentTime.AddDate(0, i, 0)
-		events, err := getWasteCollectionEvents(ctx, query.Uprn, query.Postcode, int(evalTime.Month()), evalTime.Year())
-		if err != nil {
-			logger.Error(
-				"Error when calling gov api",
-				slog.Any("error", err),
-			)
-			ctx.AbortWithError(500, err)
-			return
-		}
 
+	results := make([][]models.WasteCollectionEvent, 3)
+	var wg sync.WaitGroup
+	var hasError atomic.Int32
+
+	for i := range 3 {
+		wg.Add(1)
+		go func(index int) {
+			defer wg.Done()
+
+			if hasError.Load() == 1 {
+				return
+			}
+
+			evalTime := currentTime.AddDate(0, i, 0)
+			events, err := getWasteCollectionEvents(ctx, query.Uprn, query.Postcode, int(evalTime.Month()), evalTime.Year())
+			if err != nil {
+				// Mark that an error occurred
+				if hasError.CompareAndSwap(0, 1) {
+					logger.Error("Error when calling gov api", slog.Any("error", err))
+					ctx.AbortWithError(500, err)
+				}
+				return
+			}
+
+			results[index] = events
+		}(i)
+	}
+
+	wg.Wait()
+	if hasError.Load() == 1 {
+		return
+	}
+
+	for _, events := range results {
 		allEvents = append(allEvents, events...)
 	}
 
