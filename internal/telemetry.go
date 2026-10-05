@@ -27,12 +27,13 @@ func InitMetrics(ctx context.Context) (func(context.Context) error, error) {
 		return nil, fmt.Errorf("failed to create OTLP metric exporter: %w", err)
 	}
 
+	globalAttributesResource, err := getGlobalAttributesResource()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to set global attributes: %w", err)
+	}
 	res, err := resource.Merge(
 		resource.Default(),
-		resource.NewSchemaless(
-			semconv.ServiceNameKey.String("waste-collection-api"),
-			semconv.ServiceVersionKey.String("1.0.0"),
-		),
+		globalAttributesResource,
 	)
 
 	if err != nil {
@@ -76,4 +77,21 @@ func InitMetrics(ctx context.Context) (func(context.Context) error, error) {
 	}
 
 	return provider.Shutdown, nil
+}
+
+func getGlobalAttributesResource() (*resource.Resource, error) {
+	serviceName := os.Getenv("SERVICE__NAME")
+	if serviceName == "" {
+		serviceName = "waste-collection-api"
+	}
+
+	serviceVersion := os.Getenv("SERVICE__VERSION")
+	if serviceVersion == "" {
+		return nil, fmt.Errorf("Failed to read SERVICE__VERSION environment variable")
+	}
+
+	return resource.NewSchemaless(
+		semconv.ServiceName(serviceName),
+		semconv.ServiceVersion(serviceVersion),
+	), nil
 }
