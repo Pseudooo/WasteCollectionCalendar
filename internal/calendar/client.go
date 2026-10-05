@@ -58,8 +58,8 @@ func getWasteCollectionEvents(ctx context.Context, uprn string, postcode string,
 	}
 
 	labeler := &otelhttp.Labeler{}
-	ctx = otelhttp.ContextWithLabeler(ctx, labeler)
 	labeler.Add(attribute.String("client.name", "gov-waste-api"))
+	ctx = otelhttp.ContextWithClientLabeler(ctx, labeler)
 
 	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, strings.NewReader(data.Encode()))
 	if err != nil {
