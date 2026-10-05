@@ -68,6 +68,7 @@ func getWasteCollectionEvents(ctx context.Context, uprn string, postcode string,
 
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
+	req.Header.Add("User-Agent", "github/Pseudooo/WasteCollectionCalendar")
 
 	res, err := client.Do(req)
 	if err != nil {
