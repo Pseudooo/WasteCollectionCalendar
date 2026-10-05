@@ -19,17 +19,17 @@ type CalendarQuery struct {
 	Postcode string `form:"postcode" binding:"required"`
 }
 
-func (h *CalendarHandler) GetCalendar(c *gin.Context) {
+func (h *CalendarHandler) GetCalendar(ctx *gin.Context) {
 	logger := h.Logger
-	if ctxLogger, exists := c.Get("slog_logger"); exists {
+	if ctxLogger, exists := ctx.Get("slog_logger"); exists {
 		if l, ok := ctxLogger.(*slog.Logger); ok {
 			logger = l
 		}
 	}
 
 	var query CalendarQuery
-	if err := c.ShouldBindQuery(&query); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := ctx.ShouldBindQuery(&query); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -37,13 +37,13 @@ func (h *CalendarHandler) GetCalendar(c *gin.Context) {
 	currentTime := time.Now()
 	for i := range 3 {
 		evalTime := currentTime.AddDate(0, i, 0)
-		events, err := getWasteCollectionEvents(query.Uprn, query.Postcode, int(evalTime.Month()), evalTime.Year())
+		events, err := getWasteCollectionEvents(ctx, query.Uprn, query.Postcode, int(evalTime.Month()), evalTime.Year())
 		if err != nil {
 			logger.Error(
 				"Error when calling gov api",
 				slog.Any("error", err),
 			)
-			c.AbortWithError(500, err)
+			ctx.AbortWithError(500, err)
 			return
 		}
 
@@ -52,9 +52,9 @@ func (h *CalendarHandler) GetCalendar(c *gin.Context) {
 
 	calendar := buildCalendarFromWasteCollectionEvents(allEvents)
 
-	c.Header("Content-Type", "text/calendar; charset=utf-8")
-	c.Header("Content-Disposition", `attachment; filename="calendar.ics"`)
-	c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
+	ctx.Header("Content-Type", "text/calendar; charset=utf-8")
+	ctx.Header("Content-Disposition", `attachment; filename="calendar.ics"`)
+	ctx.Header("Cache-Control", "no-cache, no-store, must-revalidate")
 
-	c.String(http.StatusOK, calendar.Serialize(ics.WithNewLineWindows))
+	ctx.String(http.StatusOK, calendar.Serialize(ics.WithNewLineWindows))
 }

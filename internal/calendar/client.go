@@ -1,6 +1,7 @@
 package calendar
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log/slog"
@@ -12,6 +13,8 @@ import (
 
 	"github.com/Pseudooo/WasteCollectionCalendar/internal/models"
 	"github.com/PuerkitoBio/goquery"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 type GovApiError struct {
@@ -40,7 +43,7 @@ func (e *GovApiError) LogValue() slog.Value {
 	)
 }
 
-func getWasteCollectionEvents(uprn string, postcode string, month int, year int) ([]models.WasteCollectionEvent, error) {
+func getWasteCollectionEvents(ctx context.Context, uprn string, postcode string, month int, year int) ([]models.WasteCollectionEvent, error) {
 	endpoint := "https://ilambassadorformsprod.azurewebsites.net/wastecollectiondays/wastecollectioncalendar"
 	data := url.Values{}
 	data.Set("Postcode", postcode)
@@ -48,8 +51,17 @@ func getWasteCollectionEvents(uprn string, postcode string, month int, year int)
 	data.Set("Year", strconv.Itoa(year))
 	data.Set("Uprn", uprn)
 
-	client := &http.Client{}
-	req, err := http.NewRequest("POST", endpoint, strings.NewReader(data.Encode()))
+	client := &http.Client{
+		Transport: otelhttp.NewTransport(
+			http.DefaultTransport,
+		),
+	}
+
+	labeler := &otelhttp.Labeler{}
+	ctx = otelhttp.ContextWithLabeler(ctx, labeler)
+	labeler.Add(attribute.String("client.name", "gov-waste-api"))
+
+	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, err
 	}
