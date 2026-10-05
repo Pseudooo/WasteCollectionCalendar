@@ -31,6 +31,12 @@ func buildCalendarFromWasteCollectionEvents(events []models.WasteCollectionEvent
 			value.Date.AddDate(0, 0, 1).Format("20060102"),
 			ics.WithValue(string(ics.ValueDataTypeDate)),
 		)
+
+		alarm := ics.NewAlarm("")
+		alarm.SetAction(ics.ActionDisplay)
+		alarm.SetTrigger("-PT6H")
+		alarm.SetDescription("There's a waste collection day tomorrow!")
+		calendarEvent.AddVAlarm(alarm)
 	}
 
 	return calendar
