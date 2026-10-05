@@ -1,0 +1,25 @@
+ 
+### Overview
+
+In order to view upcoming waste-collection days from my local council you need to go through their website,
+enter a postcode, select an address, then view the next immediate collection days or scrub through a clunky
+calendar view.
+
+I disliked this, this API hits the gov site to collect calendar days for the next 3 months and returns the
+results in the form of an ICS file so it can be added to personal calendars.
+
+### QuickStart
+
+To make use of this you'll need:
+1. Your address UPRN _(This is a unique number for an address, you can find this at [findmyaddress.co.uk](https://www.findmyaddress.co.uk/search))
+2. Your postcode
+
+With both of these create a URL:
+```
+https://bin-days.mitchw.uk/calendar?uprn=<uprn>&postcode=<postcode>
+```
+
+This URL can be added to your google calendar _(Or other service)_ as a remote calendar and will add your
+waste-collection dates to your calendar as returned by the gov site.
+
+Note: This only works for wiltshire currently
