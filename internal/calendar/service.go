@@ -34,7 +34,7 @@ func buildCalendarFromWasteCollectionEvents(events []models.WasteCollectionEvent
 
 		alarm := ics.NewAlarm("")
 		alarm.SetAction(ics.ActionDisplay)
-		alarm.SetTrigger("-PT5H")
+		alarm.SetTrigger("-PT6H")
 		alarm.SetDescription("There's a waste collection day tomorrow!")
 		calendarEvent.AddVAlarm(alarm)
 	}
